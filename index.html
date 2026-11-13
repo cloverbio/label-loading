@@ -6,13 +6,13 @@
   <meta name="theme-color" content="#eef0ec">
   <title>ZT411 · Load new labels</title>
   <link rel="icon" href="data:,">
-  <style>:root{color-scheme:light;font-family:Arial,sans-serif;background:#eef0ec}*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}body{background:#eef0ec}#viewport{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;overflow:hidden}#scene{display:block;width:100%;height:100%;touch-action:pan-y;pointer-events:none}.controls{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));display:flex;gap:8px;z-index:4}.controls button{width:44px;height:44px;border-radius:50%;border:1px solid #ffffffbc;background:#ffffffbd;color:#35443d;display:grid;place-items:center;box-shadow:0 2px 12px #26362a0b;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.controls button:hover{background:#fff}.controls button:focus-visible{outline:3px solid #819e53;outline-offset:3px}.controls svg{width:19px;height:19px;fill:currentColor}.play-icon{display:none}.paused .pause-icon{display:none}.paused .play-icon{display:block}.controls button:disabled{opacity:.4;cursor:default}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#eef0ec;pointer-events:none}#loading[hidden],#error[hidden]{display:none}#loading span{height:20px;width:20px;border:2px solid #d1d9cb;border-top-color:#7c9465;border-radius:50%;animation:loading-spin 1s linear infinite}#error{position:absolute;left:8%;right:8%;top:40%;padding:22px;background:#fff;border:1px solid #d1d8cb;border-radius:10px;color:#4e5a51;font-size:14px;line-height:1.6;z-index:8}noscript{position:fixed;inset:40% 10% auto;padding:22px;background:white;z-index:9}@keyframes loading-spin{to{transform:rotate(360deg)}}@media(orientation:portrait){.controls{gap:7px;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top))}.controls button{width:42px;height:42px}}@media(prefers-reduced-motion:reduce){#loading span{animation:none}}
-#viewport,#scene{cursor:default}.controls button{cursor:pointer}
+  <style>:root{color-scheme:light;font-family:Arial,sans-serif;background:#eef0ec}*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none}body{background:#eef0ec}#viewport{position:fixed;inset:0;width:100%;height:100vh;height:100dvh;overflow:hidden}#scene{display:block;width:100%;height:100%;touch-action:none;pointer-events:auto;user-select:none;-webkit-user-select:none}.controls{position:absolute;right:max(14px,env(safe-area-inset-right));top:max(14px,env(safe-area-inset-top));display:flex;gap:8px;z-index:4}.controls button{width:44px;height:44px;border-radius:50%;border:1px solid #ffffffbc;background:#ffffffbd;color:#35443d;display:grid;place-items:center;box-shadow:0 2px 12px #26362a0b;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}.controls button:hover{background:#fff}.controls button:focus-visible{outline:3px solid #819e53;outline-offset:3px}.controls svg{width:19px;height:19px;fill:currentColor}.play-icon{display:none}.paused .pause-icon{display:none}.paused .play-icon{display:block}.controls button:disabled{opacity:.4;cursor:default}#loading{position:absolute;inset:0;display:grid;place-items:center;background:#eef0ec;pointer-events:none}#loading[hidden],#error[hidden]{display:none}#loading span{height:20px;width:20px;border:2px solid #d1d9cb;border-top-color:#7c9465;border-radius:50%;animation:loading-spin 1s linear infinite}#error{position:absolute;left:8%;right:8%;top:40%;padding:22px;background:#fff;border:1px solid #d1d8cb;border-radius:10px;color:#4e5a51;font-size:14px;line-height:1.6;z-index:8}noscript{position:fixed;inset:40% 10% auto;padding:22px;background:white;z-index:9}@keyframes loading-spin{to{transform:rotate(360deg)}}@media(orientation:portrait){.controls{gap:7px;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top))}.controls button{width:42px;height:42px}}@media(prefers-reduced-motion:reduce){#loading span{animation:none}}
+#viewport{cursor:default}#scene{cursor:grab}#scene.is-dragging{cursor:grabbing}.controls button{cursor:pointer}
 </style>
 </head>
 <body>
   <main id="viewport" aria-label="Zebra ZT411 label installation animation">
-    <canvas id="scene" role="img" aria-label="Animated label installation: open the cover and printhead, install the roll, feed paper beneath the curved stainless plate, between the guide bars and beneath the printhead, then close the head and cover."></canvas>
+    <canvas id="scene" role="img" aria-label="Animated label installation. Drag with a mouse or finger to look around; release to return to the automatic view. Playback continues while dragging."></canvas>
     <div id="loading" aria-label="Loading animation"><span></span></div>
     <div id="error" role="alert" hidden></div>
     <nav class="controls" aria-label="Animation playback">
@@ -544,9 +544,9 @@ function atDistance(path,d,out) {
 function labelTexture() {
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
   const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#e0e4d9';ctx.fillRect(0,0,256,256);
+  ctx.fillStyle='#e0e0dc';ctx.fillRect(0,0,256,256);
   ctx.fillStyle='#fffef4';ctx.fillRect(6,8,244,241);
-  ctx.strokeStyle='#d4d9ca';ctx.lineWidth=1;ctx.strokeRect(6.5,8.5,243,240);
+  ctx.strokeStyle='#d6d6d1';ctx.lineWidth=1;ctx.strokeRect(6.5,8.5,243,240);
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   texture.wrapS=THREE.ClampToEdgeWrapping;texture.wrapT=THREE.RepeatWrapping;texture.anisotropy=8;
   return texture;
@@ -568,17 +568,10 @@ function createPaper(radius) {
   // looked like an object covering it. Depth testing remains fully enabled;
   // the formed support really is below the paper rather than drawn over it.
   const mesh=new THREE.Mesh(geometry,material);mesh.receiveShadow=false;mesh.frustumCulled=false;group.add(mesh);
-  const edgeMat=new THREE.LineBasicMaterial({color:0x83ac56,transparent:true,opacity:.9});
-  const left=new THREE.Line(new THREE.BufferGeometry(),edgeMat);
-  const right=new THREE.Line(new THREE.BufferGeometry(),edgeMat);
-  const leftPos=new Float32Array((segments+1)*3),rightPos=new Float32Array((segments+1)*3);
-  left.geometry.setAttribute('position',new THREE.BufferAttribute(leftPos,3).setUsage(THREE.DynamicDrawUsage));
-  right.geometry.setAttribute('position',new THREE.BufferAttribute(rightPos,3).setUsage(THREE.DynamicDrawUsage));
-  left.frustumCulled=right.frustumCulled=false;group.add(left,right);
   const point=new THREE.Vector3(),tip=new THREE.Vector3();
   const originalPath=makeMediaPath(radius,0);
   let cachedFeed=-1,cachedPath;
-  function update(reveal,feed=0,highlight=false) {
+  function update(reveal,feed=0) {
     if(feed!==cachedFeed){cachedPath=makeMediaPath(radius,feed);cachedFeed=feed;}
     const length=reveal*originalPath.length+(cachedPath.length-originalPath.length);
     group.visible=length>.005;
@@ -591,15 +584,9 @@ function createPaper(radius) {
         positions[vertex]=point.x;positions[vertex+1]=point.y;positions[vertex+2]=point.z+(side-.5)*M.mediaWidth;
         const uv=(i*2+side)*2;uvs[uv]=side;uvs[uv+1]=(d-length)/.62;
       }
-      for(const [arr,z] of [[leftPos,-.5],[rightPos,.5]]) {
-        arr[i*3]=point.x;arr[i*3+1]=point.y+.006;arr[i*3+2]=point.z+z*M.mediaWidth;
-      }
     }
     geometry.attributes.position.needsUpdate=true;geometry.attributes.uv.needsUpdate=true;
     geometry.computeVertexNormals();
-    left.geometry.attributes.position.needsUpdate=true;right.geometry.attributes.position.needsUpdate=true;
-    left.visible=right.visible=highlight;
-    material.emissive.setHex(highlight?0x608b35:0x000000);material.emissiveIntensity=highlight?.05:0;
     atDistance(path,length,tip);
     return {length,tip,rotation:length/radius};
   }
@@ -614,12 +601,17 @@ const {frameCamera}=(()=>{
 
 // Fit all eight corners in view space. This uses the actual screen aspect ratio,
 // including portrait phones and rotation, instead of a desktop-width minimum.
-function frameCamera(camera,shot,scale,aspect){
+function frameCamera(camera,shot,scale,aspect,view={yaw:0,pitch:0}){
   aspect=Math.max(.1,aspect);
   const portrait=Math.max(0,Math.min(1,(1.05-aspect)/.35));
   const min=new THREE.Vector3(...shot.bounds.slice(0,3)).multiply(scale),max=new THREE.Vector3(...shot.bounds.slice(3)).multiply(scale);
   const target=min.clone().add(max).multiplyScalar(.5);
   camera.position.fromArray(shot.position).lerp(new THREE.Vector3(...shot.portrait),portrait).multiply(scale);
+  if(view.yaw||view.pitch){
+    const orbit=new THREE.Spherical().setFromVector3(camera.position.clone().sub(target));
+    orbit.theta+=view.yaw;orbit.phi=THREE.MathUtils.clamp(orbit.phi+view.pitch,.10,Math.PI/2-.05);
+    camera.position.copy(target).add(new THREE.Vector3().setFromSpherical(orbit));
+  }
   camera.up.set(0,1,0);camera.lookAt(target);camera.updateMatrixWorld(true);
   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z]){
@@ -631,6 +623,66 @@ function frameCamera(camera,shot,scale,aspect){
 }
 
 return {frameCamera};
+})();
+const {createDragView}=(()=>{
+
+// A temporary camera offset only. This controller never touches the playback
+// clock, mechanical state or the timeline's cinematic camera shots.
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+class TemporaryView {
+  constructor(){this.reset();}
+  reset(){this.yaw=0;this.pitch=0;this.pointer=null;this.returning=null;}
+  sample(now){
+    if(this.returning){
+      const u=clamp((now-this.returning.start)/800,0,1),remaining=(1-u)**3;
+      this.yaw=this.returning.yaw*remaining;this.pitch=this.returning.pitch*remaining;
+      if(u===1){this.yaw=0;this.pitch=0;this.returning=null;}
+    }
+    return {yaw:this.yaw,pitch:this.pitch,dragging:this.pointer!==null,returning:this.returning!==null};
+  }
+  begin(id,x,y,now,span){
+    if(this.pointer!==null)return false;
+    this.sample(now);this.returning=null;this.pointer=id;
+    this.start={x,y,yaw:this.yaw,pitch:this.pitch,span:Math.max(1,span)};return true;
+  }
+  move(id,x,y){
+    if(this.pointer!==id)return false;
+    this.yaw=clamp(this.start.yaw-(x-this.start.x)/this.start.span*Math.PI,-1.35,1.35);
+    this.pitch=clamp(this.start.pitch-(y-this.start.y)/this.start.span*Math.PI*.65,-.60,.60);return true;
+  }
+  release(id,now){
+    if(this.pointer===null||this.pointer!==id)return false;
+    this.pointer=null;
+    this.returning=this.yaw||this.pitch?{start:now,yaw:this.yaw,pitch:this.pitch}:null;return true;
+  }
+}
+function createDragView(element,onChange,now=()=>performance.now()){
+  const view=new TemporaryView(),owner=element.ownerDocument?.defaultView??window;
+  function capture(id){try{element.setPointerCapture?.(id);}catch{/* Keep the gesture usable in embedded browsers. */}}
+  function uncapture(id){try{if(element.hasPointerCapture?.(id))element.releasePointerCapture(id);}catch{/* Capture may already have been cancelled by the browser. */}}
+  function down(event){
+    if(event.isPrimary===false||event.button!==0)return;
+    const rect=element.getBoundingClientRect();
+    if(!view.begin(event.pointerId,event.clientX,event.clientY,now(),Math.min(rect.width,rect.height)))return;
+    event.preventDefault();capture(event.pointerId);element.classList.add('is-dragging');onChange();
+  }
+  function move(event){
+    if(!view.move(event.pointerId,event.clientX,event.clientY))return;
+    event.preventDefault();onChange();
+  }
+  function end(event){
+    if(!view.release(event.pointerId,now()))return;
+    element.classList.remove('is-dragging');uncapture(event.pointerId);onChange();
+  }
+  function cancel(){if(view.pointer!==null)end({pointerId:view.pointer});}
+  element.addEventListener('pointerdown',down);
+  element.addEventListener('pointermove',move);
+  for(const type of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(type,end);
+  owner.addEventListener('pointerup',end);owner.addEventListener('pointercancel',end);owner.addEventListener('blur',cancel);
+  return {sample:time=>view.sample(time),reset(){const id=view.pointer;view.reset();element.classList.remove('is-dragging');if(id!==null)uncapture(id);onChange();}};
+}
+
+return {createDragView};
 })();
 const {createUI}=(()=>{
 
@@ -673,11 +725,12 @@ function start(){
   const camera=new THREE.OrthographicCamera(-5,5,5,-5,.1,100),clock=new AnimationClock(performance.now());
   const params=new URLSearchParams(location.search);
   if(params.has('t')&&Number.isFinite(Number(params.get('t')))){clock.seek(Number(params.get('t')),performance.now());clock.playing=false;}
-  let width=1,height=1,dirty=true,lastTime=-1,lastRender=-1,frames=0,failed=false;
+  let width=1,height=1,dirty=true,lastTime=-1,lastRender=-1,frames=0,failed=false,lastViewYaw=0,lastViewPitch=0;
+  const dragView=createDragView(canvas,()=>{dirty=true;});
   function resize(){const box=viewport.getBoundingClientRect();width=Math.max(1,box.width);height=Math.max(1,box.height);renderer.setSize(width,height,false);dirty=true;}
   if(typeof ResizeObserver!=='undefined')new ResizeObserver(resize).observe(viewport);else window.addEventListener('resize',resize);
   window.addEventListener('orientationchange',resize);resize();
-  ui.bind(()=>{clock.toggle(performance.now());dirty=true;},()=>{clock.restart(performance.now());dirty=true;});
+  ui.bind(()=>{clock.toggle(performance.now());dirty=true;},()=>{clock.restart(performance.now());dragView.reset();dirty=true;});
   document.addEventListener('visibilitychange',()=>{clock.last=performance.now();dirty=true;});
   canvas.addEventListener('webglcontextlost',event=>{event.preventDefault();clock.playing=false;failed=true;ui.error('The graphics context was interrupted. Reload this page to restart.');});
   function draw(now){
@@ -685,15 +738,16 @@ function start(){
     try{
       if(document.hidden){clock.last=now;requestAnimationFrame(draw);return;}
       const t=clock.tick(now);
-      if(!dirty&&(t===lastTime||now-lastRender<15)){requestAnimationFrame(draw);return;}
-      lastTime=t;lastRender=now;dirty=false;
+      const view=dragView.sample(now),viewChanged=view.yaw!==lastViewYaw||view.pitch!==lastViewPitch;
+      if(!dirty&&(now-lastRender<15||(t===lastTime&&!viewChanged))){requestAnimationFrame(draw);return;}
+      lastTime=t;lastRender=now;lastViewYaw=view.yaw;lastViewPitch=view.pitch;dirty=false;
       const s=sampleTimeline(t);printer.setState(s);
-      const web=paper.update(s.paper,s.feed,s.step===2);paper.group.visible=s.newVisible&&s.paper>.001;
+      const web=paper.update(s.paper,s.feed);paper.group.visible=s.newVisible&&s.paper>.001;
       printer.newRoll.winding.rotation.z=web.rotation;
-      frameCamera(camera,s.camera,scale,width/height);scene.updateMatrixWorld(true);
+      frameCamera(camera,s.camera,scale,width/height,view);scene.updateMatrixWorld(true);
       ui.update(s,clock.playing);canvas.style.opacity=String(s.sceneOpacity);
       renderer.render(scene,camera);frames++;if(frames===1)ui.loaded();
-      window.__ZT411=Object.freeze({time:t,playing:clock.playing,frames,step:s.step+1,headOpen:s.head,handleOpen:s.lever,rollSeat:s.rollSeat,feedPress:s.feedPress,screenStatus:printer.panel.getStatus(),duration:DURATION,holding:s.holding,viewport:{width,height},version:'mobile-7'});
+      window.__ZT411=Object.freeze({time:t,playing:clock.playing,frames,step:s.step+1,headOpen:s.head,handleOpen:s.lever,rollSeat:s.rollSeat,feedPress:s.feedPress,screenStatus:printer.panel.getStatus(),duration:DURATION,holding:s.holding,view,viewport:{width,height},version:'mobile-8'});
       requestAnimationFrame(draw);
     }catch(error){failed=true;console.error(error);ui.error('3D animation stopped. '+error.message+' Reload this page to restart.');}
   }
