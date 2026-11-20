@@ -176,7 +176,7 @@ function plane(parent,w,h,x,y,z,map,unlit=false) {
   // Decals sit on their physical surface, with depth bias instead of a visible
   // air gap. They neither fight the backing face nor create transparent layers.
   material.polygonOffset=true;material.polygonOffsetFactor=-2;material.polygonOffsetUnits=-2;material.depthWrite=false;
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),material);mesh.rotation.y=-Math.PI/2;mesh.position.set(x,y,z);mesh.renderOrder=10;parent.add(mesh);return mesh;
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h,Math.max(1,Math.round(w*20)),Math.max(1,Math.round(h*20))),material);mesh.rotation.y=-Math.PI/2;mesh.position.set(x,y,z);mesh.renderOrder=10;parent.add(mesh);return mesh;
 }
 function textMap(text,color='#d0d5d4',bg='#41474c',font='500 35px Arial') {
   return texture(600,90,(ctx,w,h)=>{ctx.fillStyle=bg;ctx.fillRect(0,0,w,h);ctx.fillStyle=color;ctx.font=font;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,w/2,h/2);});
@@ -214,6 +214,7 @@ function createFrontPanel() {
   // Generic mark: three white diagonal slashes in place of the animal logo.
   slab(hood,.32,.32,.018,-2.839,2.96,.36,0x353d42,.055);
   const emblem=plane(hood,.29,.29,-2.8576,2.96,.36,texture(100,100,ctx=>{ctx.fillStyle='#353d42';ctx.fillRect(0,0,100,100);slashBadge(ctx);}));emblem.name='Three white diagonal slashes emblem';
+  plane(hood,.62,.093,-2.8576,2.66,.36,textMap('ZT411','#cfd5d4','#4d555a','600 46px Arial'));
 
   const labels=['STATUS','PAUSE','DATA','SUPPLIES','NETWORK'];
   const leds=[];
@@ -242,7 +243,7 @@ function createFrontPanel() {
       if(i===0){ctx.fillRect(74,22,16,56);ctx.fillRect(110,22,16,56);}
       if(i===1){for(const [x,y,r] of [[72,38,11],[101,27,10],[129,41,10],[115,67,12],[84,66,10]]){ctx.beginPath();ctx.ellipse(x,y,r*.65,r,Math.PI/5,0,Math.PI*2);ctx.fill();}}
       if(i===2){ctx.lineWidth=12;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(78,27);ctx.lineTo(122,73);ctx.moveTo(122,27);ctx.lineTo(78,73);ctx.stroke();}
-    }));icon.name=`${label} key face icon`;
+    }));icon.name=`${label} key face icon`;icon.userData.flat=true;
     plane(root,.25,.059,FASCIA-.0006,1.494,z,textMap(label,'#d0d5d4','#41474c','500 35px Arial'));
   });
   const markings=plane(root,.73,.11,FASCIA-.0006,1.265,COLUMN,texture(850,128,(ctx,w,h)=>{
@@ -278,6 +279,47 @@ function createFrontPanel() {
     leds.forEach((led,i)=>{led.material.color.setHex(colors[i]);led.material.emissive.setHex(colors[i]);led.material.emissiveIntensity=i<2?.32:0;});
   }
   updateScreen('PAUSED');
+
+  // ---- Curved front plastics: every front panel is a smooth convex surface, flush with its neighbours at the edges.
+  const domes=[
+    {z:COLUMN,y:2.36,w:.895,h:2.52,A:0,p:2,x:-2.8725,c:0x41474c,par:root,off:true},
+    {z:.3375,y:2.93,w:1.925,h:1.49,A:.06,p:2,x:-2.8396,c:0x4d555a,par:hood},
+    {z:.3375,y:1.06,w:1.925,h:.81,A:.035,p:4,x:-2.8396,c:0x4c545a,par:root},
+    {z:.3375,y:.39,w:1.925,h:.23,A:.025,p:4,x:-2.8396,c:0x51595f,par:root}];
+  const Bd=(d,z,y)=>{const u=2*(z-d.z)/d.w,v=2*(y-d.y)/d.h;return Math.abs(u)>=1||Math.abs(v)>=1?0:d.A*(1-u*u)*(1-Math.pow(Math.abs(v),d.p));};
+  const axis=(min,max,n,ex=[])=>{const a=new Set();for(let i=0;i<=n;i++)a.add(+(min+(max-min)*i/n).toFixed(5));ex.forEach(e=>a.add(+e.toFixed(5)));return [...a].sort((p,q)=>p-q);};
+  const domeMeshes=[];
+  for(const d of domes){
+    if(d.off)continue;
+    const hl=d.hole,xs=axis(-d.w/2,d.w/2,40,hl?[-hl.hw,hl.hw]:[]),ys=axis(-d.h/2,d.h/2,60,hl?[hl.y0,hl.y1]:[]),W=xs.length,pos=[],idx=[];
+    for(const y of ys)for(const x of xs)pos.push(x,y,Bd(d,d.z+x,d.y+y));
+    for(let j=0;j<ys.length-1;j++)for(let i=0;i<W-1;i++){
+      if(hl&&Math.abs((xs[i]+xs[i+1])/2)<hl.hw&&(ys[j]+ys[j+1])/2>hl.y0&&(ys[j]+ys[j+1])/2<hl.y1)continue;
+      const a=j*W+i,c=a+W;idx.push(a,a+1,c+1,a,c+1,c);
+    }
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
+    const m=new THREE.Mesh(g,mat(d.c));m.rotation.y=-Math.PI/2;m.position.set(d.x,d.y,d.z);m.castShadow=true;m.receiveShadow=true;m.name='Curved panel surface';d.par.add(m);domeMeshes.push(m);
+    if(hl){
+      const wp=[],wi=[],zb=(x,y)=>Bd(d,d.z+x,d.y+y);
+      const add=(x0,y0,x1,y1)=>{const n=wp.length/3;wp.push(x0,y0,zb(x0,y0),x1,y1,zb(x1,y1),x1,y1,-hl.rec,x0,y0,-hl.rec);wi.push(n,n+1,n+2,n,n+2,n+3);};
+      const ok=(v,lo,hi)=>v>=lo-1e-4&&v<=hi+1e-4;
+      for(let i=0;i<xs.length-1;i++)if(ok(xs[i],-hl.hw,hl.hw)&&ok(xs[i+1],-hl.hw,hl.hw)){add(xs[i],hl.y0,xs[i+1],hl.y0);add(xs[i],hl.y1,xs[i+1],hl.y1);}
+      for(let j=0;j<ys.length-1;j++)if(ok(ys[j],hl.y0,hl.y1)&&ok(ys[j+1],hl.y0,hl.y1)){add(-hl.hw,ys[j],-hl.hw,ys[j+1]);add(hl.hw,ys[j],hl.hw,ys[j+1]);}
+      const wg=new THREE.BufferGeometry();wg.setAttribute('position',new THREE.Float32BufferAttribute(wp,3));wg.setIndex(wi);wg.computeVertexNormals();
+      const wm=new THREE.Mesh(wg,new THREE.MeshStandardMaterial({color:0x2b3238,roughness:.7,side:THREE.DoubleSide}));wm.rotation.y=-Math.PI/2;wm.position.set(d.x,d.y,d.z);wm.name='Curved panel surface';d.par.add(wm);domeMeshes.push(wm);
+    }
+  }
+  {const skip=new Set([fascia,upperHood,lowerPanel,bottomPanel,screenBezel,display,screenBack,...domeMeshes]);
+   root.traverse(m=>{
+    if(!m.isMesh||skip.has(m))return;
+    const d=hood.children.includes(m)?domes[1]:(m.position.x<-2.8?domes.find((q,i)=>i!==1&&Math.abs(m.position.z-q.z)<q.w/2&&Math.abs(m.position.y-q.y)<q.h/2):null);if(!d)return;
+    if(m.geometry.type==='PlaneGeometry'&&!m.userData.flat){
+      const pa=m.geometry.attributes.position;
+      for(let i=0;i<pa.count;i++)pa.setZ(i,pa.getZ(i)+Bd(d,m.position.z+pa.getX(i),m.position.y+pa.getY(i)));
+      pa.needsUpdate=true;m.geometry.computeVertexNormals();
+    }else m.position.x-=Bd(d,m.position.z,m.position.y);
+   });
+   pauseCue.position.x=-Bd(domes[0],COLUMN-.30,1.676);}
   return {root,hood,display,screenBezel,screenBack,fascia,leds,keys,updateScreen,getStatus:()=>lastStatus,pauseButton:buttons[0],pauseKey:keys[0],pauseCue,setPausePress,feedButton:buttons[1],feedKey:keys[1]};
 }
 
@@ -317,10 +359,19 @@ function mediaHeightAt(x){
 }
 const palette={ shell:0xa2a6a2,housingDark:0x4c5459,dark:0x242c2e,inner:0xb9c1bd,silver:0xcbd2d0,gold:0xe8b62b,goldDark:0xb38a1c,paper:0xf9f7ec,core:0xb8a082 };
 function material(color, roughness=.65, metalness=.08) { return new THREE.MeshStandardMaterial({color,roughness,metalness}); }
+const grain=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),d=g.createImageData(128,128);for(let i=0;i<d.data.length;i+=4){const v=100+Math.random()*80;d.data[i]=d.data[i+1]=d.data[i+2]=v;d.data[i+3]=255;}g.putImageData(d,0,0);const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);return t;})();
+function housingMat(color){const m=material(color);if(color===palette.shell||color===palette.housingDark||color===palette.inner){m.bumpMap=grain;m.bumpScale=.25;m.roughness=.7;}return m;}
+function roundedGeo(w,h,d){
+  const r=Math.min(.035,Math.min(w,h,d)*.28),iw=w-2*r,ih=h-2*r,id=d-2*r;
+  if(iw<=0||ih<=0||id<=0)return new THREE.BoxGeometry(w,h,d);
+  const s=new THREE.Shape();s.moveTo(-iw/2,-ih/2);s.lineTo(iw/2,-ih/2);s.lineTo(iw/2,ih/2);s.lineTo(-iw/2,ih/2);s.closePath();
+  const g=new THREE.ExtrudeGeometry(s,{depth:id,bevelEnabled:true,bevelSize:r,bevelThickness:r,bevelSegments:2,curveSegments:1});
+  g.translate(0,0,-id/2);return g;
+}
 function box(parent,w,h,d,x,y,z,color,bevel=false) {
-  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material(color));
+  const mesh=new THREE.Mesh(roundedGeo(w,h,d),color===palette.silver?material(color,.3,.7):housingMat(color));
   mesh.position.set(x,y,z); mesh.castShadow=true; mesh.receiveShadow=true; parent.add(mesh);
-  if(bevel) {
+  if(false) {
     const edge=new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry),new THREE.LineBasicMaterial({color:0x253b39,transparent:true,opacity:.15}));
     mesh.add(edge);
   }
@@ -444,12 +495,12 @@ function createPrinter() {
   box(head,.14,.22,1.63,-1.48,-.025,0,palette.silver);
   const headClamp=box(head,.23,.25,1.54,-.15,.055,0,palette.dark);headClamp.name='Separate rear printhead clamp';
   const thermalFace=box(head,.30,.15,1.47,-1.45,-.15,0,0x26302f);thermalFace.name='Thermal head face above white platen';
-  box(head,.08,.12,.08,-.65,.235,-.53,palette.dark);
-  box(head,.08,.12,.08,-.65,.235,.53,palette.dark);
+  
+  
   cylinder(fixed,.11,1.89,MECHANICS.headPivotX,MECHANICS.headPivotY,.1,palette.silver);
   const lever=new THREE.Group();lever.position.set(MECHANICS.leverX,MECHANICS.leverY,1.00);fixed.add(lever);
   lever.name='Upper front printhead-open cam handle';
-  const leverAxle=cylinder(fixed,.165,1.75,MECHANICS.leverX,MECHANICS.leverY,.10,palette.dark);leverAxle.name='Front printhead handle axle';
+  const axleRot=new THREE.Group();axleRot.position.set(MECHANICS.leverX,MECHANICS.leverY,0);fixed.add(axleRot);const leverAxle=cylinder(axleRot,.165,1.75,0,0,.10,palette.dark);leverAxle.name='Front printhead handle axle';
   cylinder(lever,.225,.15,0,0,.025,palette.dark);
   // Curved black C-shaped grip. The broad outboard side stays black; the
   // yellow pad wraps around its FRONT-facing edge (towards printer front -X).
@@ -480,6 +531,61 @@ function createPrinter() {
   // The former large front crossbar and its duplicate have been removed.
   const tearBar=box(output,.035,.026,1.54,MECHANICS.platenX-MECHANICS.platenRadius-.06,MECHANICS.mediaY-.018,.10,0xb8c2bd);
   tearBar.name='Slim tear-off edge beside white roller';tearBar.material.metalness=.62;tearBar.material.roughness=.36;
+
+  try{
+    const dm=(c,r=.5,m=.1)=>material(c,r,m);
+    const mk=(geo,mat,parent,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;};
+    const ctex=(w,h,fn)=>{const c=document.createElement('canvas');c.width=w;c.height=h;fn(c.getContext('2d'),w,h);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t;};
+    const decal=(w,h,x,y,z,map)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map,roughness:.7,metalness:0,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));m.position.set(x,y,z);m.receiveShadow=true;fixed.add(m);return m;};
+    const wz=MECHANICS.innerWallFace+.003;
+    // Inner-wall stickers: hot-surface warning, media-path diagram, rating label.
+    // Cover-plate screws.
+    for(const sx of[-2.0,2.0])for(const sy of[.8,3.25]){const s=mk(new THREE.CylinderGeometry(.045,.045,.02,14),dm(0xb9c0be,.35,.6),fixed,sx,sy,wz);s.rotation.x=Math.PI/2;const sl=mk(new THREE.BoxGeometry(.06,.01,.004),dm(0x3a4244),fixed,sx,sy,wz+.011);sl.rotation.z=.6;}
+    // Printhead carrier: pressure-adjust knobs, circuit board, connector block.
+    for(const pz of[-.43,.63]){
+      mk(new THREE.CylinderGeometry(.21,.21,.07,24),dm(0x20282a,.5,.2),axleRot,0,0,pz).rotation.x=Math.PI/2;
+      mk(new THREE.CylinderGeometry(.105,.105,.42,24),dm(0x1a2123,.5,.25),axleRot,0,-.36,pz);
+      mk(new THREE.CylinderGeometry(.115,.115,.05,24),dm(0x2b3436,.45,.3),axleRot,0,-.20,pz);
+      mk(new THREE.CylinderGeometry(.065,.065,.12,18),new THREE.MeshStandardMaterial({color:0xaab3b2,roughness:.35,metalness:.7,flatShading:true}),axleRot,0,-.63,pz);
+      mk(new THREE.CylinderGeometry(.07,.07,.04,18),dm(palette.gold,.5,.1),axleRot,0,-.69,pz);
+    }
+    
+    
+    mk(new THREE.BoxGeometry(.18,.06,.4),dm(0xe9e5d6,.6,0),head,-.35,.215,0);
+    // Lever hub screw.
+    mk(new THREE.CylinderGeometry(.09,.09,.04,16),dm(palette.silver,.3,.7),lever,0,0,.12).rotation.x=Math.PI/2;
+    // Serrated tear-off edge.
+    {const n=44,z0=-.77,z1=.77,sh=new THREE.Shape();sh.moveTo(z0,0);sh.lineTo(z1,0);for(let i=n;i>=0;i--)sh.lineTo(z0+(z1-z0)*i/n,i%2?-.03:-.008);sh.closePath();
+     const t=mk(new THREE.ExtrudeGeometry(sh,{depth:.02,bevelEnabled:false}),dm(0xc9d0cc,.3,.7),output,MECHANICS.platenX-MECHANICS.platenRadius-.045,MECHANICS.mediaY-.004,.10);t.rotation.y=-Math.PI/2;}
+    // Platen end flange.
+    const pf=cylinder(fixed,.15,.05,MECHANICS.platenX,MECHANICS.mediaY-MECHANICS.platenRadius,.10+.89,palette.silver,20);pf.name='Platen end flange';
+    // Door window gasket frame.
+    for(const sy of[.62,-.62])box(coverSide,5.08,.06,.07,-.06,-1.02+sy,.02,0x2f373a);
+    for(const sx of[-2.5,2.5])box(coverSide,.06,1.3,.07,-.06+sx,-1.02,.02,0x2f373a);
+    window.material.roughness=.08;window.material.envMapIntensity=1.6;
+    // Hinge knuckles.
+    for(const hx of[-1.9,0,1.9]){const hk=cylinder(fixed,.12,.5,hx,3.75,-1.1,0x39434a);hk.rotation.set(0,0,Math.PI/2);}
+    // Media-sensor status LED on the guide fence.
+    mk(new THREE.SphereGeometry(.02,10,8),new THREE.MeshStandardMaterial({color:0x66d36a,emissive:0x33aa44,emissiveIntensity:.9}),guide,0,.15,0);
+
+    // ---- Rear casting: raised frame lip, motor boss behind the supply hanger, vent slots.
+    const lip=0x9aa3a4;
+    box(fixed,4.9,.05,.04,0,3.36,wz+.02,lip);box(fixed,4.9,.05,.04,0,.64,wz+.02,lip);
+    for(const sx of[-2.45,2.45])box(fixed,.05,2.75,.04,sx,2.0,wz+.02,lip);
+    cylinder(fixed,.42,.05,MECHANICS.rollX,MECHANICS.hangerY,wz+.03,0x59656a,48);
+    for(let i=0;i<6;i++){const a=i*Math.PI/3;cylinder(fixed,.03,.03,MECHANICS.rollX+.33*Math.cos(a),MECHANICS.hangerY+.33*Math.sin(a),wz+.06,palette.silver,10);}
+    // ---- Ribbon supply / take-up spindles (bare: direct-thermal view), as on the real ZT400 interior.
+    for(const [sx,sy] of [[-.05,3.05],[-1.25,3.05]]){
+      cylinder(fixed,.23,.06,sx,sy,wz+.03,0x3b4549,32);
+      cylinder(fixed,.15,.50,sx,sy,wz+.31,0x7a8588,32);
+      for(let i=0;i<6;i++)cylinder(fixed,.165,.018,sx,sy,wz+.12+i*.075,0x2a3234,32);
+      cylinder(fixed,.09,.05,sx,sy,wz+.58,palette.gold,24);
+    }
+    // ---- Window glare so the door reads as glass.
+    {const gl=new THREE.Mesh(new THREE.PlaneGeometry(4.9,1.18),new THREE.MeshBasicMaterial({transparent:true,depthWrite:false,map:ctex(512,128,(c,w,h)=>{c.clearRect(0,0,w,h);const st=[[60,70,.16],[150,40,.08],[330,90,.12]];for(const [x,wd,a] of st){c.fillStyle='rgba(255,255,255,'+a+')';c.beginPath();c.moveTo(x+40,0);c.lineTo(x+40+wd,0);c.lineTo(x+wd,h);c.lineTo(x,h);c.closePath();c.fill();}})}));gl.position.set(-.06,-1.02,.05);gl.renderOrder=5;coverSide.add(gl);}
+    // ---- Door finger recess + latch on the lower edge.
+    box(coverSide,.9,.06,.05,0,-2.74,.1,0x1b2123);box(coverSide,.5,.03,.03,0,-2.74,.13,palette.silver);
+  }catch(e){console.warn('detail pass skipped',e);}
   const anchorObjects={ cover:coverSide, lever, head, newRoll:newRoll.group, guide, output };
   const targets={cover:new THREE.Vector3(.9,-1.8,.06),lever:new THREE.Vector3(-.10,-.48,.15),head:new THREE.Vector3(-.8,.15,.8),newRoll:new THREE.Vector3(0,.35,.76),guide:new THREE.Vector3(0,.20,.08),output:new THREE.Vector3(0,.02,.65)};
   const groups={cover,lever,head,newRoll:newRoll.group,guide,output,supplyGuide,baffle,guideBlocks};
@@ -504,7 +610,7 @@ function createPrinter() {
     // change sort order and flicker as the camera moved.
     window.material.opacity=.20;
     head.rotation.z=-.32*s.head;
-    lever.rotation.z=.90*s.lever;
+    lever.rotation.z=.90*s.lever;axleRot.rotation.z=.90*s.lever;
     guide.position.z=s.guide;
     // Both supply stops are fixed. The new roll slides on from the open side.
     newRoll.group.visible=s.newVisible;newRoll.group.position.z=MECHANICS.rollZ+3.1*(1-s.newIn);
@@ -587,9 +693,9 @@ function atDistance(path,d,out) {
 function labelTexture() {
   const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
   const ctx=canvas.getContext('2d');
-  ctx.fillStyle='#e0e0dc';ctx.fillRect(0,0,256,256);
-  ctx.fillStyle='#fffef4';ctx.fillRect(6,8,244,241);
-  ctx.strokeStyle='#d6d6d1';ctx.lineWidth=1;ctx.strokeRect(6.5,8.5,243,240);
+  ctx.fillStyle='#d9d7cd';ctx.fillRect(0,0,256,256);
+  const rr=(x,y,w,h,r)=>{ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();};ctx.fillStyle='#fffef4';rr(6,8,244,241,16);ctx.fill();
+  ctx.strokeStyle='#cfcfc6';ctx.lineWidth=1.5;rr(6.5,8.5,243,240,16);ctx.stroke();
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   texture.wrapS=THREE.ClampToEdgeWrapping;texture.wrapT=THREE.RepeatWrapping;texture.anisotropy=8;
   return texture;
@@ -753,9 +859,13 @@ function start(){
   renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
   renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
   const scene=new THREE.Scene();scene.background=new THREE.Color(0xeef0ec);
-  scene.add(new THREE.HemisphereLight(0xffffff,0xa5aca1,2.5));
+  scene.add(new THREE.HemisphereLight(0xffffff,0xa5aca1,2.1));
+  try{const pm=new THREE.PMREMGenerator(renderer),env=new THREE.Scene();env.background=new THREE.Color(0xcfd6d0);
+    const sp=(w,h,x,y,z,i)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:new THREE.Color(i,i,i),side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m);};
+    sp(10,6,-6,8,6,6);sp(8,8,8,4,-5,3);sp(14,4,0,10,0,2.5);sp(6,6,-8,2,-6,1.5);
+    scene.environment=pm.fromScene(env,.04).texture;scene.environmentIntensity=.4;}catch(e){console.warn('env map skipped',e);}
   const light=new THREE.DirectionalLight(0xfffdf5,3);light.position.set(-3,9,7);light.castShadow=true;
-  light.shadow.mapSize.set(1024,1024);Object.assign(light.shadow.camera,{left:-8,right:8,top:8,bottom:-8,near:.5,far:30});
+  light.shadow.mapSize.set(2048,2048);Object.assign(light.shadow.camera,{left:-8,right:8,top:8,bottom:-8,near:.5,far:30});
   light.shadow.normalBias=.025;light.shadow.bias=-.0001;scene.add(light);
   const fill=new THREE.DirectionalLight(0xe3eceb,1.3);fill.position.set(4,6,-4);scene.add(fill);
   const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshStandardMaterial({color:0xeef0ec,roughness:1}));
